@@ -1,6 +1,6 @@
 package com.wix.async
 
-import com.twitter.util.Duration
+import scala.concurrent.duration.Duration
 
 /**
  * @author shaiyallin
@@ -35,7 +35,7 @@ object DelayStrategy {
 private[async] case class ConstantDelay(duration: Duration, sleep: DelayStrategy.Sleeper = DelayStrategy.sleep) extends DelayStrategy {
   def next = ConstantDelay(duration, sleep)
   def delay() {
-    sleep(duration.inMillis)
+    sleep(duration.toMillis)
   }
 }
 
@@ -43,6 +43,6 @@ private[async] case class ExponentialDelay(initialDuration: Duration, retryCount
                             sleep: DelayStrategy.Sleeper = DelayStrategy.sleep) extends DelayStrategy {
   def next = ExponentialDelay(initialDuration, retryCount + 1, sleep)
   def delay() {
-    sleep(initialDuration.inMillis * math.pow(2, retryCount).toLong)
+    sleep(initialDuration.toMillis * math.pow(2, retryCount).toLong)
   }
 }

@@ -5,11 +5,12 @@ import org.specs2.mutable.SpecificationWithJUnit
 import org.specs2.time.NoTimeConversions
 import org.specs2.mock.Mockito
 import org.specs2.specification.Scope
-import com.twitter.util._
-import com.twitter.conversions.time._
+import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 import FuturePerfect._
 import org.specs2.matcher._
 import org.jmock.lib.concurrent.DeterministicScheduler
+import com.twitter.util.{CountDownLatch, TimeoutException, Await}
 
 /**
  * @author shaiyallin
@@ -83,7 +84,7 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
 
     "timeout when blocking function stalls" in new AsyncScope {
 
-      val f = execution(timeout) {
+      val f = execution(timeout = timeout) {
         bar.await()
       }
       Await.result(f) must throwA[TimeoutGaveUpException]
@@ -136,7 +137,7 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
     }
 
     "wrap timeout exceptions" in new AsyncScope {
-      val f = execution(timeout, RetrySupport.NoRetries, Some({e: TimeoutException => new CustomExecption(e)})) {
+      val f = execution(timeout, RetrySupport.NoRetries, {case e: TimeoutException => new CustomExecption(e)}) {
         bar.await()
       }
       Await.result(f) must throwA[CustomExecption]
@@ -144,7 +145,7 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
     }
 
     "wrap timeout exception after retry" in new AsyncScope {
-      val f = execution(timeout = timeout, retryPolicy = RetryPolicy(retries = 1), onTimeout = Some({e: TimeoutException => new CustomExecption(e)})) {
+      val f = execution(timeout = timeout, retryPolicy = RetryPolicy(retries = 1), onTimeout = {case e: TimeoutException => new CustomExecption(e)}) {
         bar.await()
       }
       Await.result(f) must throwA[CustomExecption]

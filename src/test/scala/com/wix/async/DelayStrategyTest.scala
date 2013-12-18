@@ -3,7 +3,7 @@ package com.wix.async
 import org.specs2.mutable.SpecificationWithJUnit
 import org.specs2.mock.Mockito
 import org.specs2.time.NoTimeConversions
-import com.twitter.conversions.time._
+import scala.concurrent.duration._
 /**
  * @author shaiyallin
  * @since 12/23/12

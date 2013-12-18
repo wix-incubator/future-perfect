@@ -1,9 +1,12 @@
 package com.wix.async
 
+import scala.concurrent.duration.Duration
 import com.twitter.util._
+
 import java.util.concurrent.ScheduledExecutorService
 import RetrySupport._
 import FuturePerfect._
+import Implicits._
 
 /**
  * @author shaiyallin
@@ -18,7 +21,7 @@ trait FuturePerfect extends Reporting[Event] {
   class AsyncExecution[T](executorService: ScheduledExecutorService,
                           timeout: Duration,
                           retryPolicy: RetryPolicy,
-                          onTimeout: Option[TimeoutHandler],
+                          onTimeout: TimeoutHandler,
                           executionName: String) {
 
     private[this] def submitToAsyncExecution(f: => T) = pool(f)
@@ -70,7 +73,7 @@ trait FuturePerfect extends Reporting[Event] {
           else
             report(TimeoutWhileInQueue(submittedToQueue(), e, executionName))
 
-          throw onTimeout.map(_(e)).getOrElse(TimeoutGaveUpException(e, timeout))
+        throw onTimeout.applyOrElse(e, (cause: TimeoutException) => TimeoutGaveUpException(cause, executionName, timeout))
 
       }.onSuccess { _ =>
         report(Successful(submittedToQueue(), executionName))
@@ -86,7 +89,7 @@ trait FuturePerfect extends Reporting[Event] {
   def execution[T](f: => T): Future[T] = execution(Duration.Zero, NoRetries)(f)
   def execution[T](timeout: Duration = Duration.Zero,
                    retryPolicy: RetryPolicy = NoRetries,
-                   onTimeout: Option[TimeoutHandler] = None,
+                   onTimeout: TimeoutHandler = PartialFunction.empty,
                    executionName: String = defaultName)(blockingExecution: => T): Future[T] =
     new AsyncExecution[T](executorService, timeout, retryPolicy, onTimeout, executionName).apply(blockingExecution)
 
@@ -94,7 +97,7 @@ trait FuturePerfect extends Reporting[Event] {
 }
 
 object FuturePerfect {
-  type TimeoutHandler = (TimeoutException) => Exception
+  type TimeoutHandler = PartialFunction[TimeoutException, Exception]
 
   sealed trait Event {
     def executionName: String
@@ -108,8 +111,8 @@ object FuturePerfect {
   case class Failed(elapsed: Duration, error: Throwable, executionName: String) extends Event
 }
 
-case class TimeoutGaveUpException(cause: TimeoutException, timeout: Duration)
-  extends RuntimeException(s"Execution timed out after ${timeout.inMillis} ms, giving up.", cause)
+case class TimeoutGaveUpException(cause: TimeoutException, name: String, timeout: Duration)
+  extends RuntimeException(s"Execution $name timed out after ${timeout.toMillis} ms, giving up.", cause)
 
 
 

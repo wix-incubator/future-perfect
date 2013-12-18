@@ -13,10 +13,10 @@ class RetryStrategyTest extends SpecificationWithJUnit {
 
   "onBusinessException" should {
     "return true" in {
-      onBusinessException(new IOException) must beTrue
+      onCheckedException(new IOException) must beTrue
     }
     "return false" in {
-      onBusinessException(new IllegalArgumentException) must beFalse
+      onCheckedException(new IllegalArgumentException) must beFalse
     }
   }
 

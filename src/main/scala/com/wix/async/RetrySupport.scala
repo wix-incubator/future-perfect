@@ -25,7 +25,7 @@ object RetrySupport {
 
   val NoRetries = RetryPolicy()
 
-  def onBusinessException(e: Throwable) = e.isInstanceOf[Exception] && !e.isInstanceOf[RuntimeException]
+  def onCheckedException(e: Throwable) = e.isInstanceOf[Exception] && !e.isInstanceOf[RuntimeException]
   def onException(e: Throwable) = e.isInstanceOf[Exception]
   def onlyOnTimeout(e: Throwable) = false
   def onAnyOf(types: Class[_ <: Throwable]*)(e: Throwable) = types.exists(_.isInstance(e))
