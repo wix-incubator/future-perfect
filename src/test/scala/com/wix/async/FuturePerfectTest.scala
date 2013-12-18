@@ -1,0 +1,236 @@
+package com.wix.async
+
+import java.util.concurrent.{TimeUnit, Executors}
+import org.specs2.mutable.SpecificationWithJUnit
+import org.specs2.time.NoTimeConversions
+import org.specs2.mock.Mockito
+import org.specs2.specification.Scope
+import com.twitter.util._
+import FuturePerfect._
+import org.specs2.matcher._
+import org.jmock.lib.concurrent.DeterministicScheduler
+
+/**
+ * @author shaiyallin
+ * @since 11/5/12
+ */
+
+class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeConversions {
+
+  class AsyncScope extends Scope with FuturePerfect {
+
+    val reporter = mock[Reporter[Event]]
+    val executorService = Executors.newScheduledThreadPool(4)
+    register(reporter)
+
+    class Bar {
+
+      var times = 0
+
+      private val latch = new CountDownLatch(1)
+
+      def succeed() = incAndThen(true)
+
+      def await() = {
+        latch.await()
+        true
+      }
+
+      def release() {
+        latch.countDown()
+      }
+
+      def explode(e: Throwable): Boolean = incAndThen {
+                                                        throw e
+                                                      }
+
+      def sleep(millis: Long) = incAndThen {
+                                             Thread.sleep(millis)
+                                             true
+                                           }
+
+      var slept = 1
+      def sleepDecreasing(millis: Long) = incAndThen {
+                                                       val duration = millis / slept
+                                                       slept = slept + 1
+                                                       Thread.sleep(duration)
+                                                       println("Slept for %s ms".format(duration))
+                                                       true
+                                                     }
+
+      def explodeThenSucceed() = incAndThen {
+                                              if (times > 1)
+                                                true
+                                              else {
+                                                throw new RuntimeException("Kaboom!")
+                                              }
+                                            }
+
+      def incAndThen[T](f: => T) = {
+        times = times + 1
+        f
+      }
+
+    }
+
+    val bar = new Bar
+
+    def forSuccess(matchName: Matcher[String] = AlwaysMatcher()): Matcher[Event] = beLike {
+      case Successful(_, name) => name must matchName
+    }
+    def forFailure(error: Throwable): Matcher[Event] = beLike {
+      case Failed(_, theError, _) => theError must_== error
+    }
+    def forExceededTimeout(matchDuration: Matcher[Duration] = AlwaysMatcher()): Matcher[Event] = beLike {
+      case ExceededTimeout(actual, _) => actual must matchDuration
+    }
+
+    def forGaveUp(): Matcher[Event] = beAnInstanceOf[GaveUp]
+    def forTimeSpentInQueue(): Matcher[Event] = beAnInstanceOf[TimeSpentInQueue]
+    def forTimeoutWhileInQueue(): Matcher[Event] = beAnInstanceOf[TimeoutWhileInQueue]
+
+    def forRetrying(times: Int): Matcher[Event] = beLike {
+      case Retrying(_, remaining, _) => remaining must_== times
+    }
+  }
+
+  val timeout = Duration(100, TimeUnit.MILLISECONDS)
+
+  sequential
+
+  "Future Perfect" should {
+    // this test is here to prevent someone from breaking async execution by causing everything to execute from the calling thread
+    "execute in a background thread and not from the calling thread" in new AsyncScope {
+
+      var asyncThreadId: Long = 0
+      val f = execution {
+        asyncThreadId = Thread.currentThread().getId
+      }
+
+      Thread.currentThread().getId must_!= asyncThreadId
+    }
+    
+    "succeed when blocking function succeeds" in new AsyncScope {
+      val f = execution {
+        bar.succeed()
+      }
+      Await.result(f) must beTrue
+    }
+
+    "report success duration with default execution name" in new AsyncScope {
+      Await.ready(execution(timeout) { /* do nothing on purpose */ })
+
+      there was one(reporter).report(forSuccess(be_==("async")))
+    }
+
+
+    "report success duration with custom execution name" in new AsyncScope {
+      Await.ready(execution(timeout = timeout, executionName = "foo") { /* do nothing on purpose */ })
+
+      there was one(reporter).report(forSuccess(be_==("foo")))
+    }
+
+    "report time spent in queue" in new AsyncScope {
+      Await.ready(execution(timeout) { /* do nothing on purpose */ })
+
+      there was one(reporter).report(forTimeSpentInQueue())
+    }
+
+    "report when timed out while in queue" in new AsyncScope {
+
+      override val executorService = new DeterministicScheduler
+      override implicit lazy val timer = new ScheduledExecutorServiceTimer(Executors.newScheduledThreadPool(10))
+
+      val f = execution(timeout) { /* do nothing on purpose */ }
+
+      Await.result(f) must throwA[TimeoutGaveUpException]
+      there was one(reporter).report(forTimeoutWhileInQueue())
+
+      executorService.runUntilIdle()
+    }
+
+    "fail when blocking function fails" in new AsyncScope {
+      val error = new RuntimeException("Kaboom!")
+      val f = execution {
+        bar.explode(error)
+      }
+      Await.result(f) must throwA(error)
+
+      there was one(reporter).report(forFailure(error))
+    }
+
+    "timeout when blocking function stalls" in new AsyncScope {
+
+      val f = execution(timeout) {
+        bar.await()
+      }
+      Await.result(f) must throwA[TimeoutGaveUpException]
+      bar.release()
+
+      there was one(reporter).report(forExceededTimeout())
+      there was one(reporter).report(forGaveUp())
+    }
+
+    "retry on timeout" in new AsyncScope {
+      val f = execution(timeout, RetryPolicy(retries = 1)) {
+        bar.sleepDecreasing(150)
+      }
+      Await.result(f) must beTrue
+      bar.times must_== 2
+
+      there was one(reporter).report(forRetrying(1))
+    }
+
+    "retry on expected error" in new AsyncScope {
+      val f = execution(RetryPolicy(
+        retries = 1,
+        shouldRetry = (e => e.isInstanceOf[RuntimeException]))) {
+        bar.explodeThenSucceed()
+      }
+      Await.result(f) must beTrue
+      bar.times must_== 2
+
+      there was one(reporter).report(forRetrying(1))
+    }
+
+    "give up after retrying up to the limit" in new AsyncScope {
+      val f = execution(RetryPolicy(
+        retries = 1,
+        shouldRetry = e => e.isInstanceOf[RuntimeException]
+      )) {
+        bar.explode(new RuntimeException("Kaboom!"))
+      }
+      Await.result(f) must throwA[RuntimeException]
+      bar.times must_== 2
+    }
+
+    "not retry on unexpected error" in new AsyncScope {
+      val f = execution(RetryPolicy(retries = 2, shouldRetry = (e => e.isInstanceOf[IllegalStateException]))) {
+        println("Trying")
+        bar.explode(new RuntimeException("Kaboom!"))
+      }
+      Await.result(f) must throwA[RuntimeException]
+      bar.times must_== 1
+    }
+
+    "wrap timeout exceptions" in new AsyncScope {
+      val f = execution(timeout, RetrySupport.NoRetries, Some({e: TimeoutException => new CustomExecption(e)})) {
+        bar.await()
+      }
+      Await.result(f) must throwA[CustomExecption]
+      bar.release()
+    }
+
+    "wrap timeout exception after retry" in new AsyncScope {
+      val f = execution(timeout = timeout, retryPolicy = RetryPolicy(retries = 1), onTimeout = Some({e: TimeoutException => new CustomExecption(e)})) {
+        bar.await()
+      }
+      Await.result(f) must throwA[CustomExecption]
+      bar.release()
+    }
+    
+  }
+
+  class CustomExecption(cause: Throwable) extends RuntimeException(cause)
+
+}
