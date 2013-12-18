@@ -89,8 +89,8 @@ trait FuturePerfect extends Reporting[Event] {
   def execution[T](timeout: Duration = Duration.Zero,
                    retryPolicy: RetryPolicy = NoRetries,
                    onTimeout: TimeoutHandler = PartialFunction.empty,
-                   executionName: String = defaultName)(blockingExecution: => T): Future[T] =
-    new AsyncExecution[T](executorService, timeout, retryPolicy, onTimeout, executionName).apply(blockingExecution)
+                   name: String = defaultName)(blockingExecution: => T): Future[T] =
+    new AsyncExecution[T](executorService, timeout, retryPolicy, onTimeout, name).apply(blockingExecution)
 
   private def defaultName = "async"
 }

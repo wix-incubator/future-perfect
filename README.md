@@ -5,7 +5,9 @@ Overview
 
 Future Perfect is a library wrapping Futures with non-functional concerns such as retry policy, declarative timeouts and event reporting hooks.
 
-TODO explain why we use Twitter's futures rather than Scala futures
+We chose to use Twitter's Future implementation rather than Scala's native Futures because:
+ * Twitter's Future has the *Future.within* method, allowing us to specify a declarative timeout rather than an imperative one.
+ * Twitter's Future *.onSuccess*, *.onFailure* and *.rescue* methods return a chained future, allowing us to chain callbacks. In contrast, the counterpart methods in Scala's Future implementation are not chainable, allowing us to only specify a single callback for each type.
 
 Getting Started
 ===============
@@ -31,6 +33,22 @@ object App extends FuturePerfect {
     val executorService = Executors.newScheduledThreadPool(10)
 
     val future = execution {
+        // some blocking call
+    }
+
+    val result = Await.result(future)
+}
+```
+
+You can give your execution a name; this will be used in exception messages, as well as reported with lifecycle events (see below):
+
+```scala
+import com.wix.async._
+
+object App extends FuturePerfect {
+    val executorService = Executors.newScheduledThreadPool(10)
+
+    val future = execution(name = "foo") {
         // some blocking call
     }
 
@@ -96,7 +114,7 @@ object App extends FuturePerfect {
 
     val future = execution(
         timeout = 100 millis,
-        onTimeout = {case e: TimeoutException => new CustomExecption(e)}) {
+        retryPolicy = RetryPolicy(retries = 1, shouldRetry = onlyOnTimeout)) {
 
         // some blocking call
     }
@@ -105,10 +123,22 @@ object App extends FuturePerfect {
 }
 ```
 
-Reporting
----------
+Execution Lifecycle
+-------------------
+Throughout the life cycle of an execution, different events are being reported by FuturePerfect, including execution time,
+execution name and other info such as the exception (for failure events). You may add listeners for these events, handling
+some or all of them. Refer to
+[LoggerReporting.scala](https://github.com/wix/future-perfect/blob/master/src/main/scala/com/wix/async/LoggerReporting.scala)
+for an example on how to write such a listener.
 
+* _Successful_ - the specified execution has completed successfully within the specified duration.
+* _Failed_ - the specified execution has failed with the specified exception within the specified duration.
+* _Retrying_ - the specified execution has failed and will be retrying *n* more times.
+* _GaveUp_ - the specified execution has failed with the specified exception within the specified duration and will not be retrying.
+* _ExceededTimeout_ - the specified execution has timed out; the *actual* variable represents the total time it took the blocking call to complete.
+* _TimeSpentInQueue_ - the specified execution has waited for the specified duration in the *ExecutorService*'s queue before starting.
+* _TimeoutWhileInQueue_ - the specified execution has timed out after waiting for the specified duration in the *ExecutorService*, before even starting.
 
 Roadmap
 =======
- * Implicit conversion support for Scala futures
+* Implicit conversion support for Scala futures

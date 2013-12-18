@@ -48,7 +48,7 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
 
 
     "report success duration with custom execution name" in new AsyncScope {
-      Await.ready(execution(timeout = timeout, executionName = "foo") { /* do nothing on purpose */ })
+      Await.ready(execution(timeout = timeout, name = "foo") { /* do nothing on purpose */ })
 
       there was one(reporter).report(forSuccess(be_==("foo")))
     }
