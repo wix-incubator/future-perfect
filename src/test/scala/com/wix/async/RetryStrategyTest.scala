@@ -1,6 +1,5 @@
 package com.wix.async
 
-import RetrySupport._
 import java.io.IOException
 import org.specs2.mutable.SpecificationWithJUnit
 

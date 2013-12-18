@@ -4,7 +4,6 @@ import scala.concurrent.duration.Duration
 import com.twitter.util._
 
 import java.util.concurrent.ScheduledExecutorService
-import RetrySupport._
 import FuturePerfect._
 import Implicits._
 

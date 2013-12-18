@@ -137,7 +137,7 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
     }
 
     "wrap timeout exceptions" in new AsyncScope {
-      val f = execution(timeout, RetrySupport.NoRetries, {case e: TimeoutException => new CustomExecption(e)}) {
+      val f = execution(timeout, NoRetries, {case e: TimeoutException => new CustomExecption(e)}) {
         bar.await()
       }
       Await.result(f) must throwA[CustomExecption]
