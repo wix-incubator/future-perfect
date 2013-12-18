@@ -66,7 +66,10 @@ import com.twitter.util.TimeoutException
 object App extends FuturePerfect {
     val executorService = Executors.newScheduledThreadPool(10)
 
-    val future = execution(timeout = 100 millis, onTimeout = {case e: TimeoutException => new CustomExecption(e)}) {
+    val future = execution(
+        timeout = 100 millis,
+        onTimeout = {case e: TimeoutException => new CustomExecption(e)}) {
+
         // some blocking call
     }
 
