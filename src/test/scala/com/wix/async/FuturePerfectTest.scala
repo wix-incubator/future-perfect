@@ -1,11 +1,12 @@
 package com.wix.async
 
-import java.util.concurrent.{TimeUnit, Executors}
+import java.util.concurrent.Executors
 import org.specs2.mutable.SpecificationWithJUnit
 import org.specs2.time.NoTimeConversions
 import org.specs2.mock.Mockito
 import org.specs2.specification.Scope
 import com.twitter.util._
+import com.twitter.conversions.time._
 import FuturePerfect._
 import org.specs2.matcher._
 import org.jmock.lib.concurrent.DeterministicScheduler
@@ -16,85 +17,6 @@ import org.jmock.lib.concurrent.DeterministicScheduler
  */
 
 class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeConversions {
-
-  class AsyncScope extends Scope with FuturePerfect {
-
-    val reporter = mock[Reporter[Event]]
-    val executorService = Executors.newScheduledThreadPool(4)
-    register(reporter)
-
-    class Bar {
-
-      var times = 0
-
-      private val latch = new CountDownLatch(1)
-
-      def succeed() = incAndThen(true)
-
-      def await() = {
-        latch.await()
-        true
-      }
-
-      def release() {
-        latch.countDown()
-      }
-
-      def explode(e: Throwable): Boolean = incAndThen {
-                                                        throw e
-                                                      }
-
-      def sleep(millis: Long) = incAndThen {
-                                             Thread.sleep(millis)
-                                             true
-                                           }
-
-      var slept = 1
-      def sleepDecreasing(millis: Long) = incAndThen {
-                                                       val duration = millis / slept
-                                                       slept = slept + 1
-                                                       Thread.sleep(duration)
-                                                       println("Slept for %s ms".format(duration))
-                                                       true
-                                                     }
-
-      def explodeThenSucceed() = incAndThen {
-                                              if (times > 1)
-                                                true
-                                              else {
-                                                throw new RuntimeException("Kaboom!")
-                                              }
-                                            }
-
-      def incAndThen[T](f: => T) = {
-        times = times + 1
-        f
-      }
-
-    }
-
-    val bar = new Bar
-
-    def forSuccess(matchName: Matcher[String] = AlwaysMatcher()): Matcher[Event] = beLike {
-      case Successful(_, name) => name must matchName
-    }
-    def forFailure(error: Throwable): Matcher[Event] = beLike {
-      case Failed(_, theError, _) => theError must_== error
-    }
-    def forExceededTimeout(matchDuration: Matcher[Duration] = AlwaysMatcher()): Matcher[Event] = beLike {
-      case ExceededTimeout(actual, _) => actual must matchDuration
-    }
-
-    def forGaveUp(): Matcher[Event] = beAnInstanceOf[GaveUp]
-    def forTimeSpentInQueue(): Matcher[Event] = beAnInstanceOf[TimeSpentInQueue]
-    def forTimeoutWhileInQueue(): Matcher[Event] = beAnInstanceOf[TimeoutWhileInQueue]
-
-    def forRetrying(times: Int): Matcher[Event] = beLike {
-      case Retrying(_, remaining, _) => remaining must_== times
-    }
-  }
-
-  val timeout = Duration(100, TimeUnit.MILLISECONDS)
 
   sequential
 
@@ -233,4 +155,82 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
 
   class CustomExecption(cause: Throwable) extends RuntimeException(cause)
 
+  class AsyncScope extends Scope with FuturePerfect {
+
+     val reporter = mock[Reporter[Event]]
+     val executorService = Executors.newScheduledThreadPool(4)
+     register(reporter)
+
+     class Bar {
+
+       var times = 0
+
+       private val latch = new CountDownLatch(1)
+
+       def succeed() = incAndThen(true)
+
+       def await() = {
+         latch.await()
+         true
+       }
+
+       def release() {
+         latch.countDown()
+       }
+
+       def explode(e: Throwable): Boolean = incAndThen {
+                                                         throw e
+                                                       }
+
+       def sleep(millis: Long) = incAndThen {
+                                              Thread.sleep(millis)
+                                              true
+                                            }
+
+       var slept = 1
+       def sleepDecreasing(millis: Long) = incAndThen {
+        val duration = millis / slept
+        slept = slept + 1
+        Thread.sleep(duration)
+        println("Slept for %s ms".format(duration))
+        true
+      }
+
+       def explodeThenSucceed() = incAndThen {
+         if (times > 1)
+           true
+         else {
+           throw new RuntimeException("Kaboom!")
+         }
+       }
+
+       def incAndThen[T](f: => T) = {
+         times = times + 1
+         f
+       }
+
+     }
+
+     val bar = new Bar
+
+     def forSuccess(matchName: Matcher[String] = AlwaysMatcher()): Matcher[Event] = beLike {
+       case Successful(_, name) => name must matchName
+     }
+     def forFailure(error: Throwable): Matcher[Event] = beLike {
+       case Failed(_, theError, _) => theError must_== error
+     }
+     def forExceededTimeout(matchDuration: Matcher[Duration] = AlwaysMatcher()): Matcher[Event] = beLike {
+       case ExceededTimeout(actual, _) => actual must matchDuration
+     }
+
+     def forGaveUp(): Matcher[Event] = beAnInstanceOf[GaveUp]
+     def forTimeSpentInQueue(): Matcher[Event] = beAnInstanceOf[TimeSpentInQueue]
+     def forTimeoutWhileInQueue(): Matcher[Event] = beAnInstanceOf[TimeoutWhileInQueue]
+
+     def forRetrying(times: Int): Matcher[Event] = beLike {
+       case Retrying(_, remaining, _) => remaining must_== times
+     }
+   }
+
+   val timeout = 100 millis
 }
