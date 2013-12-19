@@ -151,6 +151,15 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
       Await.result(f) must throwA[CustomExecption]
       bar.release()
     }
+
+    "convert automatically to Scala future" in new AsyncScope {
+      import scala.{concurrent => sc}
+      import Implicits._
+
+      sc.Await.result(execution {true}, 100 millis) must beTrue
+
+
+    }
     
   }
 

@@ -2,12 +2,15 @@
 
 Overview
 ========
-
 Future Perfect is a library wrapping Futures with non-functional concerns such as retry policy, declarative timeouts and lifecycle event hooks.
 
 We chose to use Twitter's Future implementation rather than Scala's native Futures because:
  * Twitter's Future has the *Future.within* method, allowing us to specify a declarative timeout rather than an imperative one.
  * Twitter's Future *.onSuccess*, *.onFailure* and *.rescue* methods return a chained future, allowing us to chain callbacks. In contrast, the counterpart methods in Scala's Future implementation are not chainable, allowing us to only specify a single callback for each type.
+
+Motivation
+----------
+
 
 Getting Started
 ===============
@@ -141,4 +144,4 @@ for an example on how to write such a listener.
 
 Roadmap
 =======
-* Implicit conversion support for Scala futures
+* Metric-reporting Executor Service
