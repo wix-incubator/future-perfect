@@ -10,10 +10,24 @@ We chose to use Twitter's Future implementation rather than Scala's native Futur
 
 Motivation
 ----------
+So why did we write yet another asynchronous execution library? At Wix.com, we have dozens of services using legacy Java
+infrastructure that is blocking by nature - for instance JDBC, Apache HTTP Client, etc. Still wanting to have async executions
+(such as reading from MySQL, calling an RPC endpoint), we turned to using Scala Futures.
 
+However, it soon became apparent that making previously-synchronous services asynchronous introduces a myriad of problems
+such as latency-induced cascading failures, errors in the middle of an async execution chain and so on. These problems are
+of a non-functional nature, and typically require retrying (for errors) and specifying timeouts using *Await.result*. While
+this is definitely possible, it makes the otherwise-declarative nature of the (pseudo) monadic *Future* imperative, and worse -
+forcing us to extract the result, thus breaking for comprehensions or monadic transformations.
+
+Furthermore, it's important for us to be able to closely inspect the asynchronous executions, being able to know exactly
+what's happening in our DB access or RPC code. One of the drawbacks of using Futures out-of-the-box is that we generally
+lose the ability to meter execution times using off-the-shelf products. In addition, when retrying on errors or timeouts,
+we lose the ability to count or monitor said errors or timeouts.
 
 Getting Started
 ===============
+TODO add SBT / Maven snippets after releasing first milestone.
 
 Usage
 =====
@@ -58,6 +72,9 @@ object App extends FuturePerfect {
     val result = Await.result(future)
 }
 ```
+
+By default, Future Perfect returns an instance of *com.twitter.util.Future*. If you want to use Scala futures instead,
+just import *com.wix.Async.Implicits._*, which provides an implicit conversion from Twitter Future to Scala Future.
 
 Timeouts
 --------

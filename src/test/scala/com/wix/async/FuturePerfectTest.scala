@@ -157,8 +157,6 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
       import Implicits._
 
       sc.Await.result(execution {true}, 100 millis) must beTrue
-
-
     }
     
   }
