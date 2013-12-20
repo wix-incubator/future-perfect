@@ -16,3 +16,39 @@ libraryDependencies ++= Seq(
   "org.specs2"  %%  "specs2"      % "2.3.6" % "test",
   "org.jmock"   %  "jmock"       % "2.6.0" % "test"
 )
+
+publishTo := {
+  val nexus = "https://oss.sonatype.org/"
+  if (isSnapshot.value)
+    Some("snapshots" at nexus + "content/repositories/snapshots")
+  else
+    Some("releases" at nexus + "service/local/staging/deploy/maven2")
+}
+
+publishMavenStyle := true
+
+publishArtifact in Test := false
+
+pomIncludeRepository := { _ => false }
+
+pomExtra := (
+  <url>https://github.com/wix/future-perfect</url>
+  <licenses>
+    <license>
+      <name>Apache 2.0</name>
+      <url>http://www.opensource.org/licenses/Apache-2.0</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <scm>
+    <url>git@github.com:wix/future-perfect.git</url>
+    <connection>scm:git:git@github.com:wix/future-perfect.git</connection>
+  </scm>
+  <developers>
+    <developer>
+      <id>electricmonk</id>
+      <name>Shai Yallin</name>
+      <url>http://www.shaiyallin.com</url>
+    </developer>
+  </developers>
+)
