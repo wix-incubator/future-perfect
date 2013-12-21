@@ -1,1 +1,4 @@
-addSbtPlugin("org.scommon" % "sbt-settings-simple" % "0.0.1")
+addSbtPlugin("com.github.gseitz" % "sbt-release" % "0.8")
+
+addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.1")
+
