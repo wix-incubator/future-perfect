@@ -29,7 +29,61 @@ We chose to use Twitter's Future implementation rather than Scala's native Futur
 
 Getting Started
 ===============
-TODO add SBT / Maven snippets after releasing first milestone.
+Future Perfect 0.1.3 is available on Maven Central Repository. The next milestone is 0.1.4-SNAPSHOT and is available from the Sonatype snapshots repository.
+
+SBT
+---
+
+Simply add the `future-perfect` module to your build settings:
+
+```scala
+libraryDependencies += "com.wix" %% "future-perfect" % "0.1.3"
+```
+
+If you want to evaluate the upcoming snapshot release, add the Sonatype snapshot repository to your resolvers; typically this means adding the following to your `build.sbt` file:
+
+```scala
+resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
+
+libraryDependencies += "com.wix" %% "accord-core" % "0.1.4-SNAPSHOT"
+```
+
+Maven
+-----
+
+Simply add the appropriate dependency to your POM:
+
+```xml
+<dependencies>
+  <dependency>
+    <groupId>com.wix</groupId>
+    <artifactId>future-perfect_${scala.tools.version}</artifactId>
+    <version>0.1.3</version>
+  </dependency>
+</dependencies>
+```
+
+To use the snapshot version, add the Sonatype snapshot repository and a dependency on Future Perfect to your POM:
+
+```xml
+<repositories>
+  <repository>
+    <id>sonatype-snapshots</id>
+    <name>Sonatype snapshot repository</name>
+    <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    <releases><enabled>false</enabled></releases>
+    <snapshots><enabled>true</enabled></snapshots>
+  </repository>
+</repositories>
+
+<dependencies>
+  <dependency>
+    <groupId>com.wix</groupId>
+    <artifactId>future-perfect_${scala.tools.version}</artifactId>
+    <version>0.1.4-SNAPSHOT</version>
+  </dependency>
+</dependencies>
+```
 
 Usage
 =====
