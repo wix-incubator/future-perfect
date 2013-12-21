@@ -33,7 +33,7 @@ TODO add SBT / Maven snippets after releasing first milestone.
 
 Usage
 =====
-To use Future Perfect you need to extends the trait FuturePerfect and provide an instance of ScheduledExecutorService.
+To use Future Perfect you'll need to extend the trait FuturePerfect and provide an instance of ScheduledExecutorService.
 We expect a *ScheduledExecutorService* rather than a simple *ExecutorService* due to the way Twitter's Future implements timeouts;
 the *Future.within()* method scheduled a task to awaken after the timeout has passed, and if the future's promise hasn't been
 completed yet, it completes it with a *TimeoutException* failure.

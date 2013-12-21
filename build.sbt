@@ -1,8 +1,8 @@
+import aether.Aether._
+
 name := "future-perfect"
 
 organization := "com.wix"
-
-version := "0.1.0-SNAPSHOT"
 
 scalaVersion := "2.10.3"
 
@@ -25,6 +25,10 @@ publishTo := {
     Some("releases" at nexus + "service/local/staging/deploy/maven2")
 }
 
+licenses := Seq("Apache 2.0" -> url("http://www.opensource.org/licenses/Apache-2.0"))
+
+homepage := Some(url("https://github.com/wix/future-perfect"))
+
 publishMavenStyle := true
 
 publishArtifact in Test := false
@@ -32,14 +36,6 @@ publishArtifact in Test := false
 pomIncludeRepository := { _ => false }
 
 pomExtra := (
-  <url>https://github.com/wix/future-perfect</url>
-  <licenses>
-    <license>
-      <name>Apache 2.0</name>
-      <url>http://www.opensource.org/licenses/Apache-2.0</url>
-      <distribution>repo</distribution>
-    </license>
-  </licenses>
   <scm>
     <url>git@github.com:wix/future-perfect.git</url>
     <connection>scm:git:git@github.com:wix/future-perfect.git</connection>
@@ -52,3 +48,10 @@ pomExtra := (
     </developer>
   </developers>
 )
+
+Seq(aetherSettings: _*)
+
+aetherArtifact <<= (coordinates, Keys.`package` in Compile, makePom in Compile, com.typesafe.sbt.pgp.PgpKeys.signedArtifacts in Compile) map {
+  (coords: aether.MavenCoordinates, mainArtifact: File, pom: File, artifacts: Map[Artifact, File]) =>
+    aether.Aether.createArtifact(artifacts, pom, coords, mainArtifact)
+}
