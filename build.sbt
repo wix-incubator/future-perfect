@@ -1,3 +1,5 @@
+import sbtrelease._
+
 name := "future-perfect"
 
 organization := "com.wix"
@@ -48,3 +50,5 @@ pomExtra := (
 )
 
 releaseSettings
+
+ReleaseKeys.versionBump := Version.Bump.Minor
