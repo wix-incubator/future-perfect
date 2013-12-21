@@ -215,6 +215,21 @@ for an example on how to write such a listener.
 * __TimeSpentInQueue__ - the specified execution has waited for the specified duration in the *ExecutorService*'s queue before starting.
 * __TimeoutWhileInQueue__ - the specified execution has timed out after waiting for the specified duration in the *ExecutorService*, before even starting.
 
+Adding a listener is easy, just add the appropriate trait to the class extending *FuturePerfect*:
+```scala
+import com.wix.async._
+
+object App extends FuturePerfect with LoggerReporting {
+    val executorService = Executors.newScheduledThreadPool(10)
+
+    val future = execution {
+        // some blocking call
+    }
+
+    val result = Await.result(future)
+}
+```
+
 Roadmap
 =======
 * Metric-reporting Executor Service
