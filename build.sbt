@@ -1,5 +1,3 @@
-import aether.Aether._
-
 name := "future-perfect"
 
 organization := "com.wix"
@@ -49,9 +47,4 @@ pomExtra := (
   </developers>
 )
 
-Seq(aetherSettings: _*)
-
-aetherArtifact <<= (coordinates, Keys.`package` in Compile, makePom in Compile, com.typesafe.sbt.pgp.PgpKeys.signedArtifacts in Compile) map {
-  (coords: aether.MavenCoordinates, mainArtifact: File, pom: File, artifacts: Map[Artifact, File]) =>
-    aether.Aether.createArtifact(artifacts, pom, coords, mainArtifact)
-}
+releaseSettings
