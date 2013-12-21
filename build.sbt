@@ -76,3 +76,5 @@ releaseProcess := Seq[ReleaseStep](
   , commitNextVersion               //
   , pushChanges                     //also checks that an upstream branch is properly configured
 )
+
+releaseSettings
