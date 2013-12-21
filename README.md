@@ -45,7 +45,7 @@ If you want to evaluate the upcoming snapshot release, add the Sonatype snapshot
 ```scala
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
-libraryDependencies += "com.wix" %% "accord-core" % "0.1.4-SNAPSHOT"
+libraryDependencies += "com.wix" %% "future-perfect" % "0.1.4-SNAPSHOT"
 ```
 
 Maven
