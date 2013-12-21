@@ -45,3 +45,5 @@ libraryDependencies ++= Seq(
   "org.specs2"  %%  "specs2"      % "2.3.6" % "test",
   "org.jmock"   %  "jmock"       % "2.6.0" % "test"
 )
+
+releaseSettings
