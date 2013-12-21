@@ -62,6 +62,8 @@ lazy val publishSignedAction = { st: State =>
   extracted.runAggregated(com.typesafe.sbt.pgp.PgpKeys.publishSigned in Global in ref, st)
 }
 
+releaseSettings
+
 releaseProcess := Seq[ReleaseStep](
     checkSnapshotDependencies       //
   , runTest                         //
