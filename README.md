@@ -12,8 +12,8 @@ infrastructure that is blocking by nature - for instance JDBC, Apache HTTP Clien
 
 However, it soon became apparent that making previously-synchronous services asynchronous introduces a myriad of problems
 such as latency-induced cascading failures, errors in the middle of an async execution chain and so on. These problems are
-of a non-functional nature, and typically require retrying (for errors) and specifying timeouts using *Await.result*. While
-this is definitely possible, it makes the otherwise-declarative nature of the (pseudo) monadic *Future* imperative, and worse -
+of a non-functional nature, and typically require retrying (for errors) and specifying timeouts using `Await.result`. While
+this is definitely possible, it makes the otherwise-declarative nature of the (pseudo) monadic `Future` imperative, and worse -
 forcing us to extract the result, thus breaking for comprehensions or monadic transformations.
 
 Furthermore, it's important for us to be able to closely inspect the asynchronous executions, being able to know exactly
@@ -24,8 +24,8 @@ we lose the ability to count or monitor said errors or timeouts.
 On Scala vs Twitter's Futures
 -----------------------------
 We chose to use Twitter's Future implementation rather than Scala's native Futures because:
- * Twitter's Future has the *Future.within* method, allowing us to specify a declarative timeout rather than an imperative one.
- * Twitter's Future *.onSuccess*, *.onFailure* and *.rescue* methods return a chained future, allowing us to chain callbacks. In contrast, the counterpart methods in Scala's Future implementation are not chainable, allowing us to only specify a single callback for each type.
+ * Twitter's Future has the `Future.within` method, allowing us to specify a declarative timeout rather than an imperative one.
+ * Twitter's Future `.onSuccess`, `.onFailure` and `.rescue` methods return a chained future, allowing us to chain callbacks. In contrast, the counterpart methods in Scala's Future implementation are not chainable, allowing us to only specify a single callback for each type.
 
 Getting Started
 ===============
@@ -87,10 +87,10 @@ To use the snapshot version, add the Sonatype snapshot repository and a dependen
 
 Usage
 =====
-To use Future Perfect you'll need to extend the trait FuturePerfect and provide an instance of ScheduledExecutorService.
-We expect a *ScheduledExecutorService* rather than a simple *ExecutorService* due to the way Twitter's Future implements timeouts;
-the *Future.within()* method scheduled a task to awaken after the timeout has passed, and if the future's promise hasn't been
-completed yet, it completes it with a *TimeoutException* failure.
+To use Future Perfect you'll need to extend the trait `FuturePerfect` and provide an instance of `ScheduledExecutorService`.
+We expect a `ScheduledExecutorService` rather than a simple `ExecutorService` due to the way Twitter's Future implements timeouts;
+the `Future.within()` method scheduled a task to awaken after the timeout has passed, and if the future's promise hasn't been
+completed yet, it completes it with a `TimeoutException` failure.
 
 Keep in mind that if using timeouts, you'll need a thread pool of size 10 in order to run 5 executions in parallel, since
 for each execution we'll create a timeout task.
@@ -129,8 +129,8 @@ object App extends FuturePerfect {
 }
 ```
 
-By default, Future Perfect returns an instance of *com.twitter.util.Future*. If you want to use Scala futures instead,
-just import *com.wix.Async.Implicits._*, which provides an implicit conversion from Twitter Future to Scala Future.
+By default, Future Perfect returns an instance of `com.twitter.util.Future`. If you want to use Scala futures instead,
+just import `com.wix.Async.Implicits._`, which provides an implicit conversion from Twitter Future to Scala Future.
 
 Timeouts
 --------
@@ -151,8 +151,8 @@ object App extends FuturePerfect {
 }
 ```
 
-By default, if an execution times out, an exception of type *TimeoutGaveUpException* is thrown. This can be changed by
-providing the *onTimeout* argument with a partial function from *TimeoutException* to *Exception*:
+By default, if an execution times out, an exception of type `TimeoutGaveUpException` is thrown. This can be changed by
+providing the `onTimeout` argument with a partial function from `TimeoutException` to `Exception`:
 
 ```scala
 import com.wix.async._
@@ -177,9 +177,9 @@ Retrying
 --------
 
 You can specify how many retries an execution should have if it fails, as well as which conditions to retry on. By default,
-Future Perfect will not retry. Specifying a retry policy with one retry without specifying *shouldRetry* will run the execution
-at most 2 times, retrying on all exceptions. You can use a preset *RetryStrategy* such as *onCheckedException*, *onlyOnTimeout*
-or *on[FooException]*, or you may provide your own *(Throwable => Boolean)*.
+Future Perfect will not retry. Specifying a retry policy with one retry without specifying `shouldRetry` will run the execution
+at most 2 times, retrying on all exceptions. You can use a preset `RetryStrategy` such as `onCheckedException`, `onlyOnTimeout`
+or `on[FooException]`, or you may provide your own `(Throwable => Boolean)`.
 
 ```scala
 import com.wix.async._
@@ -207,15 +207,15 @@ some or all of them. Refer to
 [LoggerReporting.scala](https://github.com/wix/future-perfect/blob/master/src/main/scala/com/wix/async/LoggerReporting.scala)
 for an example on how to write such a listener.
 
-* __Successful__ - the specified execution has completed successfully within the specified duration.
-* __Failed__ - the specified execution has failed with the specified exception within the specified duration.
-* __Retrying__ - the specified execution has failed and will be retrying *n* more times.
-* __GaveUp__ - the specified execution has failed with the specified exception within the specified duration and will not be retrying.
-* __ExceededTimeout__ - the specified execution has timed out; the *actual* variable represents the total time it took the blocking call to complete.
-* __TimeSpentInQueue__ - the specified execution has waited for the specified duration in the *ExecutorService*'s queue before starting.
-* __TimeoutWhileInQueue__ - the specified execution has timed out after waiting for the specified duration in the *ExecutorService*, before even starting.
+* `Successful` - the specified execution has completed successfully within the specified duration.
+* `Failed` - the specified execution has failed with the specified exception within the specified duration.
+* `Retrying` - the specified execution has failed and will be retrying *n* more times.
+* `GaveUp` - the specified execution has failed with the specified exception within the specified duration and will not be retrying.
+* `ExceededTimeout` - the specified execution has timed out; the *actual* variable represents the total time it took the blocking call to complete.
+* `TimeSpentInQueue` - the specified execution has waited for the specified duration in the `ExecutorService`'s queue before starting.
+* `TimeoutWhileInQueue` - the specified execution has timed out after waiting for the specified duration in the `ExecutorService`, before even starting.
 
-Adding a listener is easy, just add the appropriate trait to the class extending *FuturePerfect*:
+Adding a listener is easy, just add the appropriate trait to the class extending `FuturePerfect`:
 ```scala
 import com.wix.async._
 
