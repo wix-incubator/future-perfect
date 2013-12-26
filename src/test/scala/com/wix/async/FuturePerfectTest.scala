@@ -17,7 +17,7 @@ import com.twitter.util.{CountDownLatch, TimeoutException, Await}
  * @since 11/5/12
  */
 
-class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeConversions {
+class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeConversions with MatcherMacros {
 
   sequential
 
@@ -43,20 +43,20 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
     "report success duration with default execution name" in new AsyncScope {
       Await.result(execution(timeout) { /* do nothing on purpose */ })
 
-      there was one(reporter).report(forSuccess(be_==("async")))
+      there was one(reporter).report(matchA[Successful].executionName("async"))
     }
 
 
     "report success duration with custom execution name" in new AsyncScope {
       Await.result(execution(timeout = timeout, name = "foo") { /* do nothing on purpose */ })
 
-      there was one(reporter).report(forSuccess(be_==("foo")))
+      there was one(reporter).report(matchA[Successful].executionName("foo"))
     }
 
     "report time spent in queue" in new AsyncScope {
       Await.result(execution(timeout) { /* do nothing on purpose */ })
 
-      there was one(reporter).report(forTimeSpentInQueue())
+      there was one(reporter).report(matchA[TimeSpentInQueue])
     }
 
     "report when timed out while in queue" in new AsyncScope {
@@ -67,7 +67,7 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
       val f = execution(timeout) { /* do nothing on purpose */ }
 
       Await.result(f) must throwA[TimeoutGaveUpException]
-      there was one(reporter).report(forTimeoutWhileInQueue())
+      there was one(reporter).report(matchA[TimeoutWhileInQueue])
 
       executorService.runUntilIdle()
     }
@@ -79,7 +79,7 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
       }
       Await.result(f) must throwA(error)
 
-      there was one(reporter).report(forFailure(error))
+      there was one(reporter).report(matchA[Failed].error(error))
     }
 
     "timeout when blocking function stalls" in new AsyncScope {
@@ -90,8 +90,8 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
       Await.result(f) must throwA[TimeoutGaveUpException]
       bar.release()
 
-      there was one(reporter).report(forExceededTimeout())
-      there was one(reporter).report(forGaveUp())
+      there was one(reporter).report(matchA[ExceededTimeout])
+      there was one(reporter).report(matchA[GaveUp])
     }
 
     "retry on timeout" in new AsyncScope {
@@ -101,7 +101,7 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
       Await.result(f) must beTrue
       bar.times must_== 2
 
-      there was one(reporter).report(forRetrying(1))
+      there was one(reporter).report(matchA[Retrying].remainingRetries(1))
     }
 
     "retry on expected error" in new AsyncScope {
@@ -113,7 +113,7 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
       Await.result(f) must beTrue
       bar.times must_== 2
 
-      there was one(reporter).report(forRetrying(1))
+      there was one(reporter).report(matchA[Retrying].remainingRetries(1))
     }
 
     "give up after retrying up to the limit" in new AsyncScope {
@@ -220,24 +220,6 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
      }
 
      val bar = new Bar
-
-     def forSuccess(matchName: Matcher[String] = AlwaysMatcher()): Matcher[Event] = beLike {
-       case Successful(_, name) => name must matchName
-     }
-     def forFailure(error: Throwable): Matcher[Event] = beLike {
-       case Failed(_, theError, _) => theError must_== error
-     }
-     def forExceededTimeout(matchDuration: Matcher[Duration] = AlwaysMatcher()): Matcher[Event] = beLike {
-       case ExceededTimeout(actual, _) => actual must matchDuration
-     }
-
-     def forGaveUp(): Matcher[Event] = beAnInstanceOf[GaveUp]
-     def forTimeSpentInQueue(): Matcher[Event] = beAnInstanceOf[TimeSpentInQueue]
-     def forTimeoutWhileInQueue(): Matcher[Event] = beAnInstanceOf[TimeoutWhileInQueue]
-
-     def forRetrying(times: Int): Matcher[Event] = beLike {
-       case Retrying(_, remaining, _) => remaining must_== times
-     }
    }
 
    val timeout = 100 millis
