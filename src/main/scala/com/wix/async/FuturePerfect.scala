@@ -21,11 +21,12 @@ trait FuturePerfect extends Reporting[Event] {
                           timeout: Duration,
                           retryPolicy: RetryPolicy,
                           onTimeout: TimeoutHandler,
-                          executionName: String) {
+                          executionName: String,
+                          exceededTimeoutParams: (T) => Map[String, String]) {
 
     private[this] def submitToAsyncExecution(f: => T) = pool(f)
     protected[this] lazy val pool = FuturePool(executorService)
-    
+
     private var started = false
 
     def apply(blockingExecution: => T): Future[T] = execute(retryPolicy)(blockingExecution)
@@ -46,7 +47,7 @@ trait FuturePerfect extends Reporting[Event] {
         val res: T = nested
         val duration = elapsedInBlockingCall()
         if (duration > timeout) {
-          report(ExceededTimeout(duration, executionName))
+          report(ExceededTimeout(duration, executionName, exceededTimeoutParams(res)))
         }
 
         res
@@ -83,16 +84,20 @@ trait FuturePerfect extends Reporting[Event] {
   }
 
   // for some reason default parameters don't work for a curried function so I had to supply all permutations
-  def execution[T](retry: RetryPolicy)(f: => T): Future[T] = execution(Duration.Zero, retry)(f)
-  def execution[T](timeout: Duration)(f: => T): Future[T] = execution(timeout, NoRetries)(f)
-  def execution[T](f: => T): Future[T] = execution(Duration.Zero, NoRetries)(f)
+  def execution[T](retryPolicy: RetryPolicy)(f: => T): Future[T] = execution(Duration.Zero, retryPolicy, exceededTimeoutParams = emptyParams[T])(f)
+  def execution[T](timeout: Duration)(f: => T): Future[T] = execution(timeout, NoRetries, exceededTimeoutParams = emptyParams[T])(f)
+  def execution[T](timeout: Duration, retryPolicy: RetryPolicy)(f: => T): Future[T] = execution(timeout, retryPolicy, exceededTimeoutParams = emptyParams[T])(f)
+  def execution[T](f: => T): Future[T] = execution(Duration.Zero, NoRetries, exceededTimeoutParams = emptyParams[T])(f)
   def execution[T](timeout: Duration = Duration.Zero,
                    retryPolicy: RetryPolicy = NoRetries,
                    onTimeout: TimeoutHandler = PartialFunction.empty,
-                   name: String = defaultName)(blockingExecution: => T): Future[T] =
-    new AsyncExecution[T](executorService, timeout, retryPolicy, onTimeout, name).apply(blockingExecution)
+                   name: String = defaultName,
+                   exceededTimeoutParams: (T) => Map[String, String] = emptyParams)(blockingExecution: => T): Future[T] =
+
+    new AsyncExecution[T](executorService, timeout, retryPolicy, onTimeout, name, exceededTimeoutParams).apply(blockingExecution)
 
   private def defaultName = "async"
+  private def emptyParams[T] = (t: T) => Map[String, String]()
 }
 
 object FuturePerfect {
@@ -105,7 +110,7 @@ object FuturePerfect {
   case class TimeSpentInQueue(time: Duration, executionName: String) extends Event
   case class Retrying(timeout: Duration, remainingRetries: Long, executionName: String) extends Event
   case class GaveUp(timeout: Duration, e: TimeoutException, executionName: String) extends Event
-  case class ExceededTimeout(actual: Duration, executionName: String) extends Event
+  case class ExceededTimeout(actual: Duration, executionName: String, params: Map[String, String]) extends Event
   case class Successful(elapsed: Duration, executionName: String) extends Event
   case class Failed(elapsed: Duration, error: Throwable, executionName: String) extends Event
 }

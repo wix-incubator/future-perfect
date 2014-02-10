@@ -1,24 +1,46 @@
 package com.wix.async
 
-import org.slf4j.LoggerFactory
+import com.twitter.util.TimeoutException
 import com.wix.async.FuturePerfect._
+import org.slf4j.LoggerFactory
+import scala.concurrent.duration.Duration
 
 /**
  * @author shaiyallin
  * @since 12/6/13
  */
 
-trait LoggerReporting { this: Reporting[Event] =>
+trait LoggerReporting extends LoggerReportingMessages { this: Reporting[Event] =>
 
   private val log = LoggerFactory.getLogger(getClass)
 
   listenFor {
-   case Retrying(timeout, remainingRetries, executionName) => log.warn(s"Execution [$executionName] timed out after ${timeout.toMillis} ms, retrying $remainingRetries more times.")
-   case GaveUp(timeout, _, executionName) => log.error(s"Execution [$executionName] timed out after ${timeout.toMillis} ms, giving up.")
-   case ExceededTimeout(actual, executionName) => log.error(s"Execution [$executionName] timed out, actual duration was ${actual.toMillis} ms.")
-   case TimeSpentInQueue(time, executionName) => log.info(s"Execution [$executionName] started after spending ${time.toMillis} ms in queue.")
-   case Successful(time, executionName) => log.info(s"Execution [$executionName] succeeded after ${time.toMillis} ms.")
-   case Failed(time, error, executionName) => log.error(s"Execution [$executionName] failed after ${time.toMillis} ms.", error)
-   case TimeoutWhileInQueue(time, error, executionName) => log.error(s"Execution [$executionName] timed out after waiting ${time.toMillis} in queue.", error)
+   case Retrying(timeout, remainingRetries, executionName)      => log.warn(retrying(timeout, remainingRetries, executionName))
+   case GaveUp(timeout, error, executionName)                   => log.error(gaveUp(timeout, error, executionName))
+   case ExceededTimeout(actual, executionName, params)          => log.error(exceededTimeout(actual, executionName, params))
+   case TimeSpentInQueue(time, executionName)                   => log.info(timeSpentInQueue(time, executionName))
+   case Successful(elapsed, executionName)                      => log.info(successful(elapsed, executionName))
+   case Failed(elapsed, error, executionName)                   => log.error(failed(elapsed, error, executionName), error)
+   case TimeoutWhileInQueue(timeInQueue, error, executionName)  => log.error(timeoutWhileInQueue(timeInQueue, error, executionName), error)
   }
+}
+
+trait LoggerReportingMessages {
+  def retrying(timeout: Duration, remainingRetries: Long, executionName: String) = s"Execution [$executionName] timed out after ${timeout.toMillis} ms, retrying $remainingRetries more times."
+  def gaveUp(timeout: Duration, e: TimeoutException, executionName: String) = s"Execution [$executionName] timed out after ${timeout.toMillis} ms, giving up."
+
+  def exceededTimeout(actual: Duration, executionName: String, params: Map[String, String]) = {
+    val paramsStr =
+      if (params.nonEmpty) {
+        val p = params.map(p => s"${p._1}=[${p._2}]")
+        s" Additional params: ${p.mkString(", ")}"
+      } else ""
+
+    s"Execution [$executionName] timed out, actual duration was ${actual.toMillis} ms.$paramsStr"
+  }
+
+  def timeSpentInQueue(time: Duration, executionName: String) = s"Execution [$executionName] started after spending ${time.toMillis} ms in queue."
+  def successful(elapsed: Duration, executionName: String) = s"Execution [$executionName] succeeded after ${elapsed.toMillis} ms."
+  def failed(elapsed: Duration, error: Throwable, executionName: String) = s"Execution [$executionName] failed after ${elapsed.toMillis} ms."
+  def timeoutWhileInQueue(timeInQueue: Duration, e: TimeoutException, executionName: String) = s"Execution [$executionName] timed out after waiting ${timeInQueue.toMillis} in queue."
 }
