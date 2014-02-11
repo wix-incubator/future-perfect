@@ -1,16 +1,15 @@
 package com.wix.async
 
-import java.util.concurrent.Executors
-import org.specs2.mutable.SpecificationWithJUnit
-import org.specs2.time.NoTimeConversions
-import org.specs2.mock.Mockito
-import org.specs2.specification.Scope
-import scala.concurrent.duration.Duration
-import scala.concurrent.duration._
+import com.twitter.util.{Future, CountDownLatch, TimeoutException, Await}
 import FuturePerfect._
-import org.specs2.matcher._
+import java.util.concurrent.Executors
 import org.jmock.lib.concurrent.DeterministicScheduler
-import com.twitter.util.{CountDownLatch, TimeoutException, Await}
+import org.specs2.matcher._
+import org.specs2.mock.Mockito
+import org.specs2.mutable.SpecificationWithJUnit
+import org.specs2.specification.Scope
+import org.specs2.time.NoTimeConversions
+import scala.concurrent.duration._
 
 /**
  * @author shaiyallin
@@ -32,7 +31,7 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
 
       Thread.currentThread().getId must_!= asyncThreadId
     }
-    
+
     "succeed when blocking function succeeds" in new AsyncScope {
       val f = execution {
         bar.succeed()
@@ -51,6 +50,13 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
       Await.result(execution(timeout = timeout, name = "foo") { /* do nothing on purpose */ })
 
       there was one(reporter).report(matchA[Successful].executionName("foo"))
+    }
+
+    "report success with additional params" in new AsyncScope {
+      val someParams = (u: Unit) => Map("foo" -> "bar")
+      Await.result(execution(timeout = timeout, name = "foo", paramsExtractor = someParams) { /* do nothing on purpose */ })
+
+      there was one(reporter).report(matchA[Successful].params(someParams()))
     }
 
     "report time spent in queue" in new AsyncScope {
@@ -92,6 +98,17 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
 
       there was one(reporter).report(matchA[ExceededTimeout])
       there was one(reporter).report(matchA[GaveUp])
+    }
+
+    "timeout when blocking function stalls with expected params" in new AsyncScope {
+      val someParams = (b: Boolean) => Map("Value" -> b.toString, "StaticValue" -> "foo")
+      val f = execution(timeout = timeout, paramsExtractor = someParams) {
+        bar.await()
+      }
+      Await.result(f) must throwA[TimeoutGaveUpException]
+      bar.release()
+
+      there was one(reporter).report(matchA[ExceededTimeout].params(someParams(true)))
     }
 
     "retry on timeout" in new AsyncScope {
@@ -158,7 +175,7 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
 
       sc.Await.result(execution {true}, 100 millis) must beTrue
     }
-    
+
   }
 
   class CustomExecption(cause: Throwable) extends RuntimeException(cause)
