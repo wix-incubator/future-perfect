@@ -36,19 +36,18 @@ class CustomReportingTest extends SpecificationWithJUnit with NoTimeConversions 
   }
 
   "an execution with custom reporting" should {
-    "correctly report result for exceeded timeout event" in new Context {
+    "correctly report result for exceeded timeout event by passing the calculated value to the reporter" in new Context {
       val result = "some result"
       val future = execution(timeout = 10 millis) {
         latch.await()
         result
       }
 
-      Await.result(future) must throwA[TimeoutGaveUpException]
       latch.countDown()
       there was one(customReporting).reportExceeded(result)
     }
 
-    "correctly report result for successful event" in new Context {
+    "correctly report result for successful event by passing the calculated value to the reporter" in new Context {
       val result = "some result"
       val future = execution {
         result
