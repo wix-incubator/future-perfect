@@ -2,7 +2,7 @@ package com.wix.async
 
 import com.twitter.util.{CountDownLatch, Await}
 import com.wix.async.FuturePerfect.{Successful, ExceededTimeout, Event}
-import java.util.concurrent.{Executors, ScheduledExecutorService}
+import java.util.concurrent.{ExecutorService, Executors}
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationWithJUnit
 import org.specs2.specification.Scope
@@ -30,7 +30,7 @@ class CustomReportingTest extends SpecificationWithJUnit with NoTimeConversions 
   }
 
   trait Context extends Scope with FuturePerfect with StringReporting {
-    def executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
+    def executorService: ExecutorService = Executors.newFixedThreadPool(4)
     val customReporting: CustomReporting = mock[CustomReporting]
     val latch = new CountDownLatch(1)
   }
