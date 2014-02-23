@@ -3,7 +3,7 @@ package com.wix.async
 import scala.concurrent.duration.Duration
 import com.twitter.util._
 
-import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.{Executors, ExecutorService, ScheduledExecutorService}
 import FuturePerfect._
 import Implicits._
 
@@ -14,10 +14,10 @@ import Implicits._
 
 trait FuturePerfect extends Reporting[Event] {
 
-  def executorService: ScheduledExecutorService
-  implicit lazy val timer: Timer = new ScheduledExecutorServiceTimer(executorService)
+  def executorService: ExecutorService
+  implicit lazy val timer: Timer = new ScheduledExecutorServiceTimer(Executors.newScheduledThreadPool(10))
 
-  class AsyncExecution[T](executorService: ScheduledExecutorService,
+  class AsyncExecution[T](executorService: ExecutorService,
                           timeout: Duration,
                           retryPolicy: RetryPolicy,
                           onTimeout: TimeoutHandler,

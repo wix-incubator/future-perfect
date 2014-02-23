@@ -165,7 +165,7 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
   class AsyncScope extends Scope with FuturePerfect {
 
      val reporter = mock[Reporter[Event]]
-     val executorService = Executors.newScheduledThreadPool(4)
+     val executorService = Executors.newFixedThreadPool(4)
      register(reporter)
 
      class Bar {
