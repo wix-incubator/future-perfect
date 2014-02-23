@@ -52,13 +52,6 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
       there was one(reporter).report(matchA[Successful].executionName("foo"))
     }
 
-    "report success with additional params" in new AsyncScope {
-      val someParams = (u: Unit) => Map("foo" -> "bar")
-      Await.result(execution(timeout = timeout, name = "foo", paramsExtractor = someParams) { /* do nothing on purpose */ })
-
-      there was one(reporter).report(matchA[Successful].params(someParams()))
-    }
-
     "report time spent in queue" in new AsyncScope {
       Await.result(execution(timeout) { /* do nothing on purpose */ })
 
@@ -96,19 +89,8 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
       Await.result(f) must throwA[TimeoutGaveUpException]
       bar.release()
 
-      there was one(reporter).report(matchA[ExceededTimeout])
+      there was one(reporter).report(matchA[ExceededTimeout].result(true))
       there was one(reporter).report(matchA[GaveUp])
-    }
-
-    "timeout when blocking function stalls with expected params" in new AsyncScope {
-      val someParams = (b: Boolean) => Map("Value" -> b.toString, "StaticValue" -> "foo")
-      val f = execution(timeout = timeout, paramsExtractor = someParams) {
-        bar.await()
-      }
-      Await.result(f) must throwA[TimeoutGaveUpException]
-      bar.release()
-
-      there was one(reporter).report(matchA[ExceededTimeout].params(someParams(true)))
     }
 
     "retry on timeout" in new AsyncScope {

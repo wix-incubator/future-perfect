@@ -21,8 +21,7 @@ trait FuturePerfect extends Reporting[Event] {
                           timeout: Duration,
                           retryPolicy: RetryPolicy,
                           onTimeout: TimeoutHandler,
-                          executionName: String,
-                          paramsExtractor: (T) => Map[String, String]) {
+                          executionName: String) {
 
     private[this] def submitToAsyncExecution(f: => T) = pool(f)
     protected[this] lazy val pool = FuturePool(executorService)
@@ -47,7 +46,7 @@ trait FuturePerfect extends Reporting[Event] {
         val res: T = nested
         val duration = elapsedInBlockingCall()
         if (duration > timeout) {
-          report(ExceededTimeout(duration, executionName, paramsExtractor(res)))
+          report(ExceededTimeout(duration, executionName, res))
         }
 
         res
@@ -76,7 +75,7 @@ trait FuturePerfect extends Reporting[Event] {
         throw onTimeout.applyOrElse(e, (cause: TimeoutException) => TimeoutGaveUpException(cause, executionName, timeout))
 
       }.onSuccess { t: T =>
-        report(Successful(submittedToQueue(), executionName, paramsExtractor(t)))
+        report(Successful(submittedToQueue(), executionName, t))
       }.onFailure { error =>
         report(Failed(submittedToQueue(), error, executionName))
       }
@@ -84,20 +83,18 @@ trait FuturePerfect extends Reporting[Event] {
   }
 
   // for some reason default parameters don't work for a curried function so I had to supply all permutations
-  def execution[T](retryPolicy: RetryPolicy)(f: => T): Future[T] = execution(Duration.Zero, retryPolicy, paramsExtractor = emptyParams[T])(f)
-  def execution[T](timeout: Duration)(f: => T): Future[T] = execution(timeout, NoRetries, paramsExtractor = emptyParams[T])(f)
-  def execution[T](timeout: Duration, retryPolicy: RetryPolicy)(f: => T): Future[T] = execution(timeout, retryPolicy, paramsExtractor = emptyParams[T])(f)
-  def execution[T](f: => T): Future[T] = execution(Duration.Zero, NoRetries, paramsExtractor = emptyParams[T])(f)
+  def execution[T](retryPolicy: RetryPolicy)(f: => T): Future[T] = execution(Duration.Zero, retryPolicy)(f)
+  def execution[T](timeout: Duration)(f: => T): Future[T] = execution(timeout, NoRetries)(f)
+  def execution[T](timeout: Duration, retryPolicy: RetryPolicy)(f: => T): Future[T] = execution(timeout, retryPolicy,  PartialFunction.empty)(f)
+  def execution[T](f: => T): Future[T] = execution(Duration.Zero, NoRetries)(f)
   def execution[T](timeout: Duration = Duration.Zero,
                    retryPolicy: RetryPolicy = NoRetries,
                    onTimeout: TimeoutHandler = PartialFunction.empty,
-                   name: String = defaultName,
-                   paramsExtractor: (T) => Map[String, String] = emptyParams)(blockingExecution: => T): Future[T] =
+                   name: String = defaultName)(blockingExecution: => T): Future[T] =
 
-    new AsyncExecution[T](executorService, timeout, retryPolicy, onTimeout, name, paramsExtractor).apply(blockingExecution)
+    new AsyncExecution[T](executorService, timeout, retryPolicy, onTimeout, name).apply(blockingExecution)
 
   private def defaultName = "async"
-  private def emptyParams[T] = (t: T) => Map[String, String]()
 }
 
 object FuturePerfect {
@@ -110,8 +107,8 @@ object FuturePerfect {
   case class TimeSpentInQueue(time: Duration, executionName: String) extends Event
   case class Retrying(timeout: Duration, remainingRetries: Long, executionName: String) extends Event
   case class GaveUp(timeout: Duration, e: TimeoutException, executionName: String) extends Event
-  case class ExceededTimeout(actual: Duration, executionName: String, params: Map[String, String]) extends Event
-  case class Successful(elapsed: Duration, executionName: String, params: Map[String, String]) extends Event
+  case class ExceededTimeout(actual: Duration, executionName: String, result: Any) extends Event
+  case class Successful(elapsed: Duration, executionName: String, result: Any) extends Event
   case class Failed(elapsed: Duration, error: Throwable, executionName: String) extends Event
 }
 
