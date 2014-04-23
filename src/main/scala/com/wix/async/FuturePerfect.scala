@@ -1,11 +1,11 @@
 package com.wix.async
 
 import scala.concurrent.duration.Duration
-import com.twitter.util._
 
-import java.util.concurrent.{Executors, ExecutorService, ScheduledExecutorService}
+import java.util.concurrent.ExecutorService
 import FuturePerfect._
 import Implicits._
+import com.twitter.util.{Future, FuturePool, ScheduledThreadPoolTimer, Timer, Stopwatch, TimeoutException}
 
 /**
  * @author shaiyallin
@@ -15,7 +15,8 @@ import Implicits._
 trait FuturePerfect extends Reporting[Event] {
 
   def executorService: ExecutorService
-  implicit lazy val timer: Timer = new ScheduledExecutorServiceTimer(Executors.newScheduledThreadPool(10))
+
+  private lazy val timer: Timer = new ScheduledThreadPoolTimer()
 
   class AsyncExecution[T](executorService: ExecutorService,
                           timeout: Duration,
@@ -59,7 +60,7 @@ trait FuturePerfect extends Reporting[Event] {
       }
 
       if (timeout != Duration.Zero)
-        future = future.within(timeout)
+        future = future.within(timer, timeout)
 
       future.rescue {
         case e: Throwable if retryPolicy.shouldRetryFor(e) =>

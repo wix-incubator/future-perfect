@@ -4,8 +4,6 @@ import sbtrelease._
 import ReleaseStateTransformations._
 import ReleasePlugin._
 import ReleaseKeys._
-import Utilities._
-import com.typesafe.sbt.SbtPgp.PgpKeys._
 
 name := "future-perfect"
 
@@ -19,7 +17,7 @@ resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repos
 
 libraryDependencies ++= Seq(
   "org.slf4j"   %   "slf4j-api"   % "1.7.5",
-  "com.twitter" %%  "util-core"   % "6.3.6",
+  "com.twitter" %%  "util-core"   % "6.12.1",
   "org.specs2"  %%  "specs2"      % "2.3.7" % "test",
   "org.jmock"   %  "jmock"       % "2.6.0" % "test"
 )
