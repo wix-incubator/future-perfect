@@ -46,7 +46,7 @@ trait FuturePerfect extends Reporting[Event] {
         val elapsedInBlockingCall = Stopwatch.start()
         val res: T = nested
         val duration = elapsedInBlockingCall()
-        if (duration > timeout) {
+        if (timeout != Duration.Zero && duration > timeout) {
           report(ExceededTimeout(duration, executionName, res))
         }
 
