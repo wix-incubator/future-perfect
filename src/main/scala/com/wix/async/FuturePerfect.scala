@@ -11,12 +11,8 @@ import com.twitter.util.{Future, FuturePool, ScheduledThreadPoolTimer, Timer, St
  * @author shaiyallin
  * @since 10/31/12
  */
-
 trait FuturePerfect extends Reporting[Event] {
-
   def executorService: ExecutorService
-
-  private lazy val timer: Timer = new ScheduledThreadPoolTimer()
 
   class AsyncExecution[T](executorService: ExecutorService,
                           timeout: Duration,
@@ -100,6 +96,7 @@ trait FuturePerfect extends Reporting[Event] {
 
 object FuturePerfect {
   type TimeoutHandler = PartialFunction[TimeoutException, Exception]
+  private lazy val timer: Timer = new ScheduledThreadPoolTimer()
 
   sealed trait Event {
     def executionName: String
