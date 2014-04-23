@@ -61,7 +61,6 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
     "report when timed out while in queue" in new AsyncScope {
 
       override val executorService = new DeterministicScheduler
-      override implicit lazy val timer = new ScheduledExecutorServiceTimer(Executors.newScheduledThreadPool(10))
 
       val f = execution(timeout) { /* do nothing on purpose */ }
 
