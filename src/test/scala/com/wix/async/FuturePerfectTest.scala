@@ -1,14 +1,17 @@
 package com.wix.async
 
-import com.twitter.util.{Future, CountDownLatch, TimeoutException, Await}
-import FuturePerfect._
 import java.util.concurrent.Executors
+
+import com.twitter.util.{Await, CountDownLatch, TimeoutException}
+import com.wix.async.FuturePerfect._
+import com.wix.async.helpers.TestableDelayStrategy
 import org.jmock.lib.concurrent.DeterministicScheduler
 import org.specs2.matcher._
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationWithJUnit
 import org.specs2.specification.Scope
 import org.specs2.time.NoTimeConversions
+
 import scala.concurrent.duration._
 
 /**
@@ -114,6 +117,15 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
       there was one(reporter).report(matchA[Retrying].remainingRetries(1))
     }
 
+    "delay before retrying" in new AsyncScope {
+      val delayStrategy = TestableDelayStrategy()
+      val f = execution( RetryPolicy(retries = 3, shouldRetry = (e => true), delayStrategy = delayStrategy)) {
+        bar.explodeThenSucceed(succeedAfter = 2)
+      }
+      Await.result(f)
+      there was two(delayStrategy).delay()
+    }
+
     "give up after retrying up to the limit" in new AsyncScope {
       val f = execution(RetryPolicy(
         retries = 1,
@@ -151,8 +163,9 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
     }
 
     "convert automatically to Scala future" in new AsyncScope {
-      import scala.{concurrent => sc}
-      import Implicits._
+      import com.wix.async.Implicits._
+
+import scala.{concurrent => sc}
 
       sc.Await.result(execution {true}, 100 millis) must beTrue
     }
@@ -184,7 +197,7 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
          latch.countDown()
        }
 
-       def explode(e: Throwable): Boolean = incAndThen {
+       def explode(e: Throwable = new RuntimeException("**!big badaboom!**")): Boolean = incAndThen {
                                                          throw e
                                                        }
 
@@ -202,8 +215,8 @@ class FuturePerfectTest extends SpecificationWithJUnit with Mockito with NoTimeC
         true
       }
 
-       def explodeThenSucceed() = incAndThen {
-         if (times > 1)
+       def explodeThenSucceed(succeedAfter: Int = 1) = incAndThen {
+         if (times > succeedAfter)
            true
          else {
            throw new RuntimeException("Kaboom!")
