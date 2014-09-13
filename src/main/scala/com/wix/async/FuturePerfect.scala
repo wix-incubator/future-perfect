@@ -61,6 +61,7 @@ trait FuturePerfect extends Reporting[Event] {
       future.rescue {
         case e: Throwable if retryPolicy.shouldRetryFor(e) =>
           report(Retrying(timeout, retryPolicy.retries, executionName))
+          retryPolicy.delayStrategy.delay()
           execute(retryPolicy.next)(blockingExecution)
 
         case e: TimeoutException =>
