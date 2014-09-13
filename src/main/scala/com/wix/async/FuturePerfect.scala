@@ -1,11 +1,11 @@
 package com.wix.async
 
-import scala.concurrent.duration.Duration
-
 import java.util.concurrent.ExecutorService
-import FuturePerfect._
-import Implicits._
-import com.twitter.util.{Future, FuturePool, ScheduledThreadPoolTimer, Timer, Stopwatch, TimeoutException}
+
+import com.twitter.util.{Future, TimeoutException}
+import com.wix.async.FuturePerfect._
+
+import scala.concurrent.duration.Duration
 
 /**
  * @author shaiyallin
@@ -13,72 +13,6 @@ import com.twitter.util.{Future, FuturePool, ScheduledThreadPoolTimer, Timer, St
  */
 trait FuturePerfect extends Reporting[Event] {
   def executorService: ExecutorService
-
-  class AsyncExecution[T](executorService: ExecutorService,
-                          timeout: Duration,
-                          retryPolicy: RetryPolicy,
-                          onTimeout: TimeoutHandler,
-                          executionName: String) {
-
-    private[this] def submitToAsyncExecution(f: => T) = pool(f)
-    protected[this] lazy val pool = FuturePool(executorService)
-
-    private var started = false
-
-    def apply(blockingExecution: => T): Future[T] = execute(retryPolicy)(blockingExecution)
-
-    private[this] def execute(retryPolicy: RetryPolicy)(blockingExecution: => T): Future[T] = {
-      val submittedToQueue = Stopwatch.start()
-
-      /**
-       * Wraps the code to be executed with a reporting block
-       * @return
-       */
-      def decorateWithReporting(nested: => T) = {
-
-        started = true
-        report(TimeSpentInQueue(submittedToQueue(), executionName))
-
-        val elapsedInBlockingCall = Stopwatch.start()
-        val res: T = nested
-        val duration = elapsedInBlockingCall()
-        if (timeout != Duration.Zero && duration > timeout) {
-          report(ExceededTimeout(duration, executionName, res))
-        }
-
-        res
-      }
-
-      var future = submitToAsyncExecution {
-        decorateWithReporting {
-          blockingExecution
-        }
-      }
-
-      if (timeout != Duration.Zero)
-        future = future.within(timer, timeout)
-
-      future.rescue {
-        case e: Throwable if retryPolicy.shouldRetryFor(e) =>
-          report(Retrying(timeout, retryPolicy.retries, executionName))
-          retryPolicy.delayStrategy.delay()
-          execute(retryPolicy.next)(blockingExecution)
-
-        case e: TimeoutException =>
-          if (started)
-            report(GaveUp(timeout, e, executionName))
-          else
-            report(TimeoutWhileInQueue(submittedToQueue(), e, executionName))
-
-        throw onTimeout.applyOrElse(e, (cause: TimeoutException) => TimeoutGaveUpException(cause, executionName, timeout))
-
-      }.onSuccess { t: T =>
-        report(Successful(submittedToQueue(), executionName, t))
-      }.onFailure { error =>
-        report(Failed(submittedToQueue(), error, executionName))
-      }
-    }
-  }
 
   // for some reason default parameters don't work for a curried function so I had to supply all permutations
   def execution[T](retryPolicy: RetryPolicy)(f: => T): Future[T] = execution(Duration.Zero, retryPolicy)(f)
@@ -89,15 +23,13 @@ trait FuturePerfect extends Reporting[Event] {
                    retryPolicy: RetryPolicy = NoRetries,
                    onTimeout: TimeoutHandler = PartialFunction.empty,
                    name: String = defaultName)(blockingExecution: => T): Future[T] =
-
-    new AsyncExecution[T](executorService, timeout, retryPolicy, onTimeout, name).apply(blockingExecution)
+    new AsyncExecution[T](executorService, timeout, retryPolicy, onTimeout, name, report).apply(blockingExecution)
 
   private def defaultName = "async"
 }
 
 object FuturePerfect {
   type TimeoutHandler = PartialFunction[TimeoutException, Exception]
-  private lazy val timer: Timer = new ScheduledThreadPoolTimer()
 
   sealed trait Event {
     def executionName: String
