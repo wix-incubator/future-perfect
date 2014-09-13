@@ -37,7 +37,7 @@ SBT
 Simply add the `future-perfect` module to your build settings:
 
 ```scala
-libraryDependencies += "com.wix" %% "future-perfect" % "0.1.19"
+libraryDependencies += "com.wix" %% "future-perfect" % "0.1.9"
 ```
 
 If you want to evaluate the upcoming snapshot release, add the Sonatype snapshot repository to your resolvers; typically this means adding the following to your `build.sbt` file:
