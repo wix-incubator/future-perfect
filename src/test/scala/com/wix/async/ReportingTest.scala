@@ -20,14 +20,12 @@ class ReportingTest extends SpecificationWithJUnit {
         listenFor { case e =>
           messages +:= s"reporter 1 got event ${e.message}"
         }
-
       }
 
       trait Reporter2 { this: Reporting[Event] =>
         listenFor { case e =>
           messages +:= s"reporter 2 got event ${e.message}"
         }
-
       }
 
       class Bar extends Reporting[Event] {
