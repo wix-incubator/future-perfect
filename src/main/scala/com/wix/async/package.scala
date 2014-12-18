@@ -1,5 +1,9 @@
 package com.wix
 
+import java.util.concurrent.TimeoutException
+
+import scala.concurrent.duration.Duration
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.reflect.ClassTag
 
 /**
@@ -18,5 +22,6 @@ package object async {
   def on[E <: Throwable](e: Throwable)(implicit m: ClassTag[E]) = m.runtimeClass.isInstance(e)
 
   def onceFor[E <: Throwable](implicit m: ClassTag[E]) = RetryPolicy(retries = 1, shouldRetry = on[E])
+
 
 }

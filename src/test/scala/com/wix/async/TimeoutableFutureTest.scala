@@ -1,17 +1,17 @@
 package com.wix.async
 
-import java.util.concurrent.{TimeUnit, ScheduledThreadPoolExecutor, CountDownLatch, Executors}
+import java.util.concurrent.{CountDownLatch, Executors}
 
-import com.twitter.util.TimerTask
-import com.wix.async.FuturePerfect.Successful
 import com.wix.async.helpers.FooOperation
-import org.specs2.mutable.{SpecificationWithJUnit, Specification}
+import com.wix.async.Implicits._
+import org.specs2.mutable.SpecificationWithJUnit
 import org.specs2.specification.Scope
 import org.specs2.time.NoTimeConversions
+
 import scala.concurrent._
-import ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import java.util.Timer
+import scala.util.Success
+import com.wix.async.TerminatorScheduler.Global
 
 /**
  * Created by Igor_Glizer on 11/27/14.
@@ -29,47 +29,28 @@ class TimeoutableFutureTest extends SpecificationWithJUnit with NoTimeConversion
     }
     val timeout = 100.millis
 
-    implicit class TimeoutableFuture[T](f: Future[T]) {
+    def aFuture = Future { 1 }
 
-      def within(timeout: Duration) = {
-        val p = Promise[T]()
-
-        val terminator = Terminator(timeout) {
-          p.tryFailure(new TimeoutException(s"Future.within timed out after ${timeout.toMillis} millis"))
-        }
-
-        f.onComplete { result =>
-          p.tryComplete(result)
-          terminator.cancel
-        }
-
-        p.future
-      }
-
-      class Terminator(timeout: Duration, f: => Unit) {
-        import Terminator._
-        val runnable = new Runnable { def run() = f }
-        val javaf = scheduler.schedule(runnable, timeout.toMillis, TimeUnit.MILLISECONDS)
-
-        def cancel = {
-          javaf.cancel(true)
-          scheduler.remove(runnable)
-        }
-      }
-
-      object Terminator {
-        val scheduler = new ScheduledThreadPoolExecutor(1)
-        scheduler.setMaximumPoolSize(5)
-
-        def apply(timeout: Duration)(f: => Unit) = new Terminator(timeout, f)
-      }
-    }
   }
 
   "within" should {
-    "comeback on time" in new Context {
-      val f = Future { 1 }
+    "succeed if the future completed within specified timeout" in new Context {
+      val f = aFuture
       theExecutionOf(f.within(timeout)) must beEqualTo(1)
+    }
+
+    "return the same future when timeout is forever" in new Context {
+      val p = Promise[Int]()
+      val f = p.future
+      f.within(Duration.Zero) must beTheSameAs(f)
+    }
+
+    "return the same future if it's already satisfied" in new Context {
+      val p = Promise[Int]()
+      val f = p.future
+      p.complete(Success(1))
+
+      f.within(timeout) must beTheSameAs(f)
     }
 
     "fail if timeout has passed" in new Context {
