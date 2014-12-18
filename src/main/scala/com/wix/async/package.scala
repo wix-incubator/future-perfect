@@ -1,9 +1,5 @@
 package com.wix
 
-import java.util.concurrent.TimeoutException
-
-import scala.concurrent.duration.Duration
-import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.reflect.ClassTag
 
 /**

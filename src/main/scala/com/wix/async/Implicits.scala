@@ -6,6 +6,7 @@ import java.util.concurrent.{TimeoutException, TimeUnit}
 import com.twitter.{util => tw}
 import scala.language.implicitConversions
 import scala.concurrent.{ExecutionContext, Promise, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * @author shaiyallin
@@ -26,6 +27,20 @@ object Implicits {
       case tw.Throw(e) => p failure e
     }
     p.future
+  }
+
+  implicit def scalaFuture2TwitterFuture[T](f: Future[T]): tw.Future[T] = {
+    val p = tw.Promise[T]()
+
+    f.onSuccess { case r: T =>
+      p.setValue(r)
+    }
+
+    f.onFailure { case e: T =>
+      p.setException(e)
+    }
+
+    p
   }
 
   implicit class TimeoutableFuture[T](f: Future[T]) {
