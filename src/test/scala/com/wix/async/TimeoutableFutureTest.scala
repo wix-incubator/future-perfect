@@ -13,9 +13,6 @@ import scala.concurrent.duration._
 import scala.util.Success
 import com.wix.async.TerminatorScheduler.Global
 
-/**
- * Created by Igor_Glizer on 11/27/14.
- */
 class TimeoutableFutureTest extends SpecificationWithJUnit with NoTimeConversions {
 
   trait Context extends Scope with FuturePerfect {

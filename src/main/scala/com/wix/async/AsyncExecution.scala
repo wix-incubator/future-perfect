@@ -45,6 +45,11 @@ protected[async] class AsyncExecution[T](executorService: ExecutorService,
       future = future.within(timeout)
 
     future = future.recoverWith {
+      case e: Throwable if retryPolicy.shouldRetryFor(e) =>
+        report(Retrying(timeout, retryPolicy.retries, executionName))
+        retryPolicy.delayStrategy.delay()
+        execute(retryPolicy.next)(blockingExecution)
+
       case e: TimeoutException =>
         if (started)
           report(GaveUp(timeout, e, executionName))
@@ -52,13 +57,6 @@ protected[async] class AsyncExecution[T](executorService: ExecutorService,
           report(TimeoutWhileInQueue(submittedToQueue(), e, executionName))
 
         throw onTimeout.applyOrElse(e, (cause: TimeoutException) => TimeoutGaveUpException(cause, executionName, timeout))
-
-      case e: Throwable if retryPolicy.shouldRetryFor(e) =>
-        report(Retrying(timeout, retryPolicy.retries, executionName))
-        retryPolicy.delayStrategy.delay()
-        execute(retryPolicy.next)(blockingExecution)
-
-
     }
 
     future.onSuccess { case t: T =>
