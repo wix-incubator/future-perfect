@@ -27,7 +27,6 @@ class TimeoutableFutureTest extends SpecificationWithJUnit with NoTimeConversion
     val timeout = 100.millis
 
     def aFuture = Future { 1 }
-
   }
 
   "within" should {
