@@ -27,7 +27,7 @@ protected[async] class AsyncExecution[T](executorService: ExecutorService,
   def apply(blockingExecution: => T): Future[T] = execute(retryPolicy)(blockingExecution)
 
   protected lazy val pool = FuturePool(executorService)
-  private var started = false
+  @volatile private var started = false
   private def execute(retryPolicy: RetryPolicy)(blockingExecution: => T): Future[T] = {
     val submittedToQueue = Stopwatch.start()
 
