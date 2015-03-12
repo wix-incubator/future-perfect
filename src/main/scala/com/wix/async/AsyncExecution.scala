@@ -29,6 +29,7 @@ protected[async] class AsyncExecution[T](executorService: ExecutorService,
   def apply(blockingExecution: => T): Future[T] = execute(retryPolicy)(blockingExecution)
 
   @volatile private var started = false
+  @volatile private var timedOut = false
   private implicit val executionContext = ExecutionContext.fromExecutorService(executorService)
   private implicit val terminator = AsyncExecution.terminator
 
@@ -51,6 +52,8 @@ protected[async] class AsyncExecution[T](executorService: ExecutorService,
         execute(retryPolicy.next)(blockingExecution)
 
       case e: TimeoutException =>
+        timedOut = true
+
         if (started)
           report(GaveUp(timeout, e, executionName))
         else
@@ -83,7 +86,8 @@ protected[async] class AsyncExecution[T](executorService: ExecutorService,
     val elapsedInBlockingCall = Stopwatch.start()
     val res: T = nested
     val duration = elapsedInBlockingCall()
-    if (timeout != Duration.Zero && duration > timeout) {
+
+    if ((timeout != Duration.Zero && duration > timeout) || timedOut) {
       report(ExceededTimeout(duration, executionName, res))
     }
     res
