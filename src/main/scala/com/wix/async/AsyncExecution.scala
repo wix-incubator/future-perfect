@@ -28,10 +28,10 @@ protected[async] class AsyncExecution[T](executorService: ExecutorService,
 
   def apply(blockingExecution: => T): Future[T] = execute(retryPolicy)(blockingExecution)
 
+  @volatile private var started = false
   private implicit val executionContext = ExecutionContext.fromExecutorService(executorService)
   private implicit val terminator = AsyncExecution.terminator
 
-  private var started = false
   private def execute(retryPolicy: RetryPolicy)(blockingExecution: => T): Future[T] = {
     val submittedToQueue = Stopwatch.start()
 
