@@ -29,7 +29,7 @@ We chose to use Twitter's Future implementation rather than Scala's native Futur
 
 Getting Started
 ===============
-Future Perfect `0.1.9` is available for Scala 2.10 and 2.11 on Maven Central Repository. The next milestone is `0.1.10-SNAPSHOT` and is available from the Sonatype snapshots repository.
+Future Perfect `0.1.10` is available for Scala 2.10 and 2.11 on Maven Central Repository. The next milestone is `0.1.11-SNAPSHOT` and is available from the Sonatype snapshots repository.
 
 SBT
 ---
@@ -37,7 +37,7 @@ SBT
 Simply add the `future-perfect` module to your build settings:
 
 ```scala
-libraryDependencies += "com.wix" %% "future-perfect" % "0.1.9"
+libraryDependencies += "com.wix" %% "future-perfect" % "0.1.10"
 ```
 
 If you want to evaluate the upcoming snapshot release, add the Sonatype snapshot repository to your resolvers; typically this means adding the following to your `build.sbt` file:
@@ -58,7 +58,7 @@ Simply add the appropriate dependency to your POM:
   <dependency>
     <groupId>com.wix</groupId>
     <artifactId>future-perfect_${scala.tools.version}</artifactId>
-    <version>0.1.9</version>
+    <version>0.1.10</version>
   </dependency>
 </dependencies>
 ```
@@ -80,7 +80,7 @@ To use the snapshot version, add the Sonatype snapshot repository and a dependen
   <dependency>
     <groupId>com.wix</groupId>
     <artifactId>future-perfect_${scala.tools.version}</artifactId>
-    <version>0.1.10-SNAPSHOT</version>
+    <version>0.1.11-SNAPSHOT</version>
   </dependency>
 </dependencies>
 ```
