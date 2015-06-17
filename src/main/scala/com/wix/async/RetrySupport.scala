@@ -1,6 +1,6 @@
 package com.wix.async
 
-import DelayStrategy._
+import com.wix.async.DelayStrategy._
 
 /**
  * User: avitaln
@@ -12,7 +12,9 @@ trait RetrySupport {
     try {
       fn
     } catch {
-      case e : Throwable if retryPolicy.shouldRetryFor(e) => withRetry(retryPolicy.next)(fn)
+      case e : Throwable if retryPolicy.shouldRetryFor(e) =>
+        retryPolicy.delayStrategy.delay()
+        withRetry(retryPolicy.next)(fn)
     }
   }
 }
