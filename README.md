@@ -1,5 +1,9 @@
 [![Build Status](https://travis-ci.org/wix/future-perfect.png)](https://travis-ci.org/wix/future-perfect)
 
+End of Life
+===========
+Future Perfect library is no longer maintained.
+
 Overview
 ========
 Future Perfect is a library wrapping Futures with non-functional concerns such as retry policy, declarative timeouts and lifecycle event hooks.
