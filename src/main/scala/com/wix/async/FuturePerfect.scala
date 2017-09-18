@@ -1,10 +1,10 @@
 package com.wix.async
 
-import java.util.concurrent.ExecutorService
+import java.util.concurrent.{TimeoutException, ExecutorService}
 
-import com.twitter.util.{Future, TimeoutException}
 import com.wix.async.FuturePerfect._
 
+import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
 /**

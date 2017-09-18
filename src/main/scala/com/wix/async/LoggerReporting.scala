@@ -1,6 +1,7 @@
 package com.wix.async
 
-import com.twitter.util.TimeoutException
+import java.util.concurrent.TimeoutException
+
 import com.wix.async.FuturePerfect._
 import org.slf4j.LoggerFactory
 import scala.concurrent.duration.Duration

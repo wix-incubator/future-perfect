@@ -19,4 +19,5 @@ package object async {
 
   def onceFor[E <: Throwable](implicit m: ClassTag[E]) = RetryPolicy(retries = 1, shouldRetry = on[E])
 
+
 }

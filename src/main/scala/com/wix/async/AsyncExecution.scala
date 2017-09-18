@@ -2,7 +2,9 @@ package com.wix.async
 
 import java.util.concurrent.ExecutorService
 
-import com.twitter.util._
+import com.twitter.util.Stopwatch
+
+import scala.concurrent._
 import com.wix.async.FuturePerfect.{Event, _}
 import com.wix.async.Implicits._
 
@@ -14,7 +16,7 @@ import scala.concurrent.duration.Duration
  * Time: 5:57 PM
  */
 private object AsyncExecution {
-  protected[async] lazy val timer: Timer = new ScheduledThreadPoolTimer()
+  protected[async] lazy val terminator: TerminatorScheduler = new ScheduledThreadPoolTerminator
 }
 
 protected[async] class AsyncExecution[T](executorService: ExecutorService,
@@ -26,8 +28,11 @@ protected[async] class AsyncExecution[T](executorService: ExecutorService,
 
   def apply(blockingExecution: => T): Future[T] = execute(retryPolicy)(blockingExecution)
 
-  protected lazy val pool = FuturePool(executorService)
   @volatile private var started = false
+  @volatile private var timedOut = false
+  private implicit val executionContext = ExecutionContext.fromExecutorService(executorService)
+  private implicit val terminator = AsyncExecution.terminator
+
   private def execute(retryPolicy: RetryPolicy)(blockingExecution: => T): Future[T] = {
     val submittedToQueue = Stopwatch.start()
 
@@ -38,30 +43,37 @@ protected[async] class AsyncExecution[T](executorService: ExecutorService,
     }
 
     if (timeout != Duration.Zero)
-      future = future.within(AsyncExecution.timer, timeout)
+      future = future.within(timeout)
 
-    future.rescue {
+    future = future.recoverWith {
       case e: Throwable if retryPolicy.shouldRetryFor(e) =>
         report(Retrying(timeout, retryPolicy.retries, executionName))
         retryPolicy.delayStrategy.delay()
         execute(retryPolicy.next)(blockingExecution)
 
       case e: TimeoutException =>
+        timedOut = true
+
         if (started)
           report(GaveUp(timeout, e, executionName))
         else
           report(TimeoutWhileInQueue(submittedToQueue(), e, executionName))
 
         throw onTimeout.applyOrElse(e, (cause: TimeoutException) => TimeoutGaveUpException(cause, executionName, timeout))
+    }
 
-    }.onSuccess { t: T =>
+    future.onSuccess { case t: T =>
       report(Successful(submittedToQueue(), executionName, t))
-    }.onFailure { error =>
+    }
+
+    future.onFailure { case error =>
       report(Failed(submittedToQueue(), error, executionName))
     }
+
+    future
   }
 
-  private def submitToAsyncExecution(f: => T) = pool(f)
+  private def submitToAsyncExecution(f: => T) = Future(f)
 
   /**
    * Wraps the code to be executed with a reporting block
@@ -74,7 +86,8 @@ protected[async] class AsyncExecution[T](executorService: ExecutorService,
     val elapsedInBlockingCall = Stopwatch.start()
     val res: T = nested
     val duration = elapsedInBlockingCall()
-    if (timeout != Duration.Zero && duration > timeout) {
+
+    if ((timeout != Duration.Zero && duration > timeout) || timedOut) {
       report(ExceededTimeout(duration, executionName, res))
     }
     res
